@@ -1,7 +1,8 @@
-import sys
 import random
-import pygame
+import sys
 from typing import List, Optional, Tuple
+
+import pygame
 
 # ---------------------------
 # Config
@@ -20,12 +21,9 @@ TEXT_COLOR = (30, 30, 30)
 OVERLAY_BG = (0, 0, 0, 180)
 
 # Unicode chess symbols
-UNICODE_WHITE = {
-    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙'
-}
-UNICODE_BLACK = {
-    'K': '♚', 'Q': '♛', 'R': '♜', 'B': '♝', 'N': '♞', 'P': '♟'
-}
+UNICODE_WHITE = {"K": "♔", "Q": "♕", "R": "♖", "B": "♗", "N": "♘", "P": "♙"}
+UNICODE_BLACK = {"K": "♚", "Q": "♛", "R": "♜", "B": "♝", "N": "♞", "P": "♟"}
+
 
 # ---------------------------
 # Data Structures
@@ -38,9 +36,9 @@ class Piece:
     def __repr__(self):
         return f"{self.color}{self.kind}"
 
+
 Board = List[List[Optional[Piece]]]
 Move = Tuple[int, int, int, int, Optional[str]]  # (r1, c1, r2, c2, promotion)
-
 
 # ---------------------------
 # Initialization
@@ -52,8 +50,13 @@ clock = pygame.time.Clock()
 
 # Try to pick a font likely to include Unicode chess glyphs
 CANDIDATE_FONTS = [
-    "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", "Noto Sans Symbols",
-    "Segoe UI", "Arial", None
+    "DejaVu Sans",
+    "Arial Unicode MS",
+    "Segoe UI Symbol",
+    "Noto Sans Symbols",
+    "Segoe UI",
+    "Arial",
+    None,
 ]
 
 PIECE_FONT = None
@@ -74,31 +77,32 @@ if PIECE_FONT is None:
 UI_FONT = pygame.font.SysFont("Segoe UI", 24) or pygame.font.Font(None, 24)
 BIG_UI_FONT = pygame.font.SysFont("Segoe UI", 40) or pygame.font.Font(None, 40)
 
-
 # ---------------------------
 # Board Setup
 # ---------------------------
 
+
 def initial_board() -> Board:
     board: Board = [[None for _ in range(COLS)] for _ in range(ROWS)]
     # Place pieces
-    placement = ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+    placement = ["R", "N", "B", "Q", "K", "B", "N", "R"]
     # White back rank (row 7), pawns row 6
     for c, k in enumerate(placement):
-        board[7][c] = Piece(k, 'w')
+        board[7][c] = Piece(k, "w")
     for c in range(COLS):
-        board[6][c] = Piece('P', 'w')
+        board[6][c] = Piece("P", "w")
     # Black back rank (row 0), pawns row 1
     for c, k in enumerate(placement):
-        board[0][c] = Piece(k, 'b')
+        board[0][c] = Piece(k, "b")
     for c in range(COLS):
-        board[1][c] = Piece('P', 'b')
+        board[1][c] = Piece("P", "b")
     return board
 
 
 # ---------------------------
 # Helpers
 # ---------------------------
+
 
 def in_bounds(r: int, c: int) -> bool:
     return 0 <= r < ROWS and 0 <= c < COLS
@@ -108,7 +112,7 @@ def find_king(board: Board, color: str) -> Tuple[int, int]:
     for r in range(ROWS):
         for c in range(COLS):
             piece = board[r][c]
-            if piece and piece.kind == 'K' and piece.color == color:
+            if piece and piece.kind == "K" and piece.color == color:
                 return (r, c)
     return (-1, -1)
 
@@ -127,17 +131,18 @@ def clone_board(board: Board) -> Board:
 # Move Generation (Pseudo-legal)
 # ---------------------------
 
+
 def pawn_moves(board: Board, r: int, c: int, color: str) -> List[Move]:
     moves: List[Move] = []
-    dir = -1 if color == 'w' else 1
-    start_row = 6 if color == 'w' else 1
-    promotion_row = 0 if color == 'w' else 7
+    dir = -1 if color == "w" else 1
+    start_row = 6 if color == "w" else 1
+    promotion_row = 0 if color == "w" else 7
 
     # Forward 1
     r1, c1 = r + dir, c
     if in_bounds(r1, c1) and board[r1][c1] is None:
         if r1 == promotion_row:
-            moves.append((r, c, r1, c1, 'Q'))
+            moves.append((r, c, r1, c1, "Q"))
         else:
             moves.append((r, c, r1, c1, None))
         # Forward 2 from start
@@ -148,9 +153,13 @@ def pawn_moves(board: Board, r: int, c: int, color: str) -> List[Move]:
     # Captures
     for dc in (-1, 1):
         rr, cc = r + dir, c + dc
-        if in_bounds(rr, cc) and board[rr][cc] is not None and board[rr][cc].color != color:
+        if (
+            in_bounds(rr, cc)
+            and board[rr][cc] is not None
+            and board[rr][cc].color != color
+        ):
             if rr == promotion_row:
-                moves.append((r, c, rr, cc, 'Q'))
+                moves.append((r, c, rr, cc, "Q"))
             else:
                 moves.append((r, c, rr, cc, None))
 
@@ -158,7 +167,9 @@ def pawn_moves(board: Board, r: int, c: int, color: str) -> List[Move]:
     return moves
 
 
-def sliding_moves(board: Board, r: int, c: int, color: str, directions: List[Tuple[int, int]]) -> List[Move]:
+def sliding_moves(
+    board: Board, r: int, c: int, color: str, directions: List[Tuple[int, int]]
+) -> List[Move]:
     res: List[Move] = []
     for dr, dc in directions:
         rr, cc = r + dr, c + dc
@@ -176,9 +187,20 @@ def sliding_moves(board: Board, r: int, c: int, color: str, directions: List[Tup
 
 def knight_moves(board: Board, r: int, c: int, color: str) -> List[Move]:
     res: List[Move] = []
-    for dr, dc in [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]:
+    for dr, dc in [
+        (-2, -1),
+        (-2, 1),
+        (-1, -2),
+        (-1, 2),
+        (1, -2),
+        (1, 2),
+        (2, -1),
+        (2, 1),
+    ]:
         rr, cc = r + dr, c + dc
-        if in_bounds(rr, cc) and (board[rr][cc] is None or board[rr][cc].color != color):
+        if in_bounds(rr, cc) and (
+            board[rr][cc] is None or board[rr][cc].color != color
+        ):
             res.append((r, c, rr, cc, None))
     return res
 
@@ -190,7 +212,9 @@ def king_moves(board: Board, r: int, c: int, color: str) -> List[Move]:
             if dr == 0 and dc == 0:
                 continue
             rr, cc = r + dr, c + dc
-            if in_bounds(rr, cc) and (board[rr][cc] is None or board[rr][cc].color != color):
+            if in_bounds(rr, cc) and (
+                board[rr][cc] is None or board[rr][cc].color != color
+            ):
                 res.append((r, c, rr, cc, None))
     # Castling not implemented
     return res
@@ -203,18 +227,42 @@ def generate_pseudo_legal(board: Board, color: str) -> List[Move]:
             p = board[r][c]
             if not p or p.color != color:
                 continue
-            if p.kind == 'P':
+            if p.kind == "P":
                 moves.extend(pawn_moves(board, r, c, color))
-            elif p.kind == 'R':
-                moves.extend(sliding_moves(board, r, c, color, [(1, 0), (-1, 0), (0, 1), (0, -1)]))
-            elif p.kind == 'B':
-                moves.extend(sliding_moves(board, r, c, color, [(1, 1), (1, -1), (-1, 1), (-1, -1)]))
-            elif p.kind == 'Q':
-                moves.extend(sliding_moves(board, r, c, color,
-                                           [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1)]))
-            elif p.kind == 'N':
+            elif p.kind == "R":
+                moves.extend(
+                    sliding_moves(
+                        board, r, c, color, [(1, 0), (-1, 0), (0, 1), (0, -1)]
+                    )
+                )
+            elif p.kind == "B":
+                moves.extend(
+                    sliding_moves(
+                        board, r, c, color, [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+                    )
+                )
+            elif p.kind == "Q":
+                moves.extend(
+                    sliding_moves(
+                        board,
+                        r,
+                        c,
+                        color,
+                        [
+                            (1, 0),
+                            (-1, 0),
+                            (0, 1),
+                            (0, -1),
+                            (1, 1),
+                            (1, -1),
+                            (-1, 1),
+                            (-1, -1),
+                        ],
+                    )
+                )
+            elif p.kind == "N":
                 moves.extend(knight_moves(board, r, c, color))
-            elif p.kind == 'K':
+            elif p.kind == "K":
                 moves.extend(king_moves(board, r, c, color))
     return moves
 
@@ -223,12 +271,13 @@ def generate_pseudo_legal(board: Board, color: str) -> List[Move]:
 # Check Detection and Legal Move Filtering
 # ---------------------------
 
+
 def apply_move(board: Board, move: Move) -> Board:
     r1, c1, r2, c2, promo = move
     newb = clone_board(board)
     piece = newb[r1][c1]
     newb[r1][c1] = None
-    if promo and piece and piece.kind == 'P':
+    if promo and piece and piece.kind == "P":
         newb[r2][c2] = Piece(promo, piece.color)
     else:
         newb[r2][c2] = piece
@@ -239,20 +288,30 @@ def square_attacked_by(board: Board, r: int, c: int, attacker_color: str) -> boo
     # Generate pseudo-legal moves for attacker and see if any reaches (r, c)
     # Slightly optimized by checking patterns
     # Pawns
-    dir = -1 if attacker_color == 'w' else 1
+    dir = -1 if attacker_color == "w" else 1
     for dc in (-1, 1):
-        rr, cc = r - dir, c - dc  # reverse because we want squares that attack (r,c)
+        # reverse because we want squares that attack (r,c)
+        rr, cc = r - dir, c - dc
         if in_bounds(rr, cc):
             p = board[rr][cc]
-            if p and p.color == attacker_color and p.kind == 'P':
+            if p and p.color == attacker_color and p.kind == "P":
                 return True
 
     # Knights
-    for dr, dc in [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]:
+    for dr, dc in [
+        (-2, -1),
+        (-2, 1),
+        (-1, -2),
+        (-1, 2),
+        (1, -2),
+        (1, 2),
+        (2, -1),
+        (2, 1),
+    ]:
         rr, cc = r + dr, c + dc
         if in_bounds(rr, cc):
             p = board[rr][cc]
-            if p and p.color == attacker_color and p.kind == 'N':
+            if p and p.color == attacker_color and p.kind == "N":
                 return True
 
     # Kings (adjacent squares)
@@ -263,7 +322,7 @@ def square_attacked_by(board: Board, r: int, c: int, attacker_color: str) -> boo
             rr, cc = r + dr, c + dc
             if in_bounds(rr, cc):
                 p = board[rr][cc]
-                if p and p.color == attacker_color and p.kind == 'K':
+                if p and p.color == attacker_color and p.kind == "K":
                     return True
 
     # Sliding pieces: rooks/queens (orthogonal), bishops/queens (diagonal)
@@ -273,7 +332,7 @@ def square_attacked_by(board: Board, r: int, c: int, attacker_color: str) -> boo
         while in_bounds(rr, cc):
             p = board[rr][cc]
             if p:
-                if p.color == attacker_color and (p.kind == 'R' or p.kind == 'Q'):
+                if p.color == attacker_color and (p.kind == "R" or p.kind == "Q"):
                     return True
                 break
             rr += dr
@@ -284,7 +343,7 @@ def square_attacked_by(board: Board, r: int, c: int, attacker_color: str) -> boo
         while in_bounds(rr, cc):
             p = board[rr][cc]
             if p:
-                if p.color == attacker_color and (p.kind == 'B' or p.kind == 'Q'):
+                if p.color == attacker_color and (p.kind == "B" or p.kind == "Q"):
                     return True
                 break
             rr += dr
@@ -297,7 +356,7 @@ def is_in_check(board: Board, color: str) -> bool:
     kr, kc = find_king(board, color)
     if kr == -1:
         return False
-    opponent = 'b' if color == 'w' else 'w'
+    opponent = "b" if color == "w" else "w"
     return square_attacked_by(board, kr, kc, opponent)
 
 
@@ -314,16 +373,19 @@ def generate_legal_moves(board: Board, color: str) -> List[Move]:
 # AI (Random Move)
 # ---------------------------
 
+
 def ai_select_move(board: Board, color: str) -> Optional[Move]:
     moves = generate_legal_moves(board, color)
     if not moves:
         return None
     # Slightly prefer captures by shuffling then sorting
     random.shuffle(moves)
+
     def capture_score(m: Move) -> int:
         r1, c1, r2, c2, _ = m
         target = board[r2][c2]
         return 1 if target is not None else 0
+
     moves.sort(key=capture_score, reverse=True)
     return moves[0]
 
@@ -332,15 +394,26 @@ def ai_select_move(board: Board, color: str) -> Optional[Move]:
 # Rendering
 # ---------------------------
 
-def draw_board(board: Board, selected: Optional[Tuple[int, int]], legal_moves_for_selected: List[Tuple[int, int]], turn: str, game_over_text: Optional[str]):
+
+def draw_board(
+    board: Board,
+    selected: Optional[Tuple[int, int]],
+    legal_moves_for_selected: List[Tuple[int, int]],
+    turn: str,
+    game_over_text: Optional[str],
+):
     # Draw squares
     for r in range(ROWS):
         for c in range(COLS):
             color = LIGHT_SQ if (r + c) % 2 == 0 else DARK_SQ
-            pygame.draw.rect(screen, color, (c * SQUARE_SIZE, r * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+            pygame.draw.rect(
+                screen,
+                color,
+                (c * SQUARE_SIZE, r * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE),
+            )
 
     # Highlight legal moves for selected
-    for (rr, cc) in legal_moves_for_selected:
+    for rr, cc in legal_moves_for_selected:
         rect = pygame.Rect(cc * SQUARE_SIZE, rr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE)
         s = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
         s.fill((*HIGHLIGHT_MOVE, 100))
@@ -364,7 +437,10 @@ def draw_board(board: Board, selected: Optional[Tuple[int, int]], legal_moves_fo
             p = board[r][c]
             if not p:
                 continue
-            center = (c * SQUARE_SIZE + SQUARE_SIZE // 2, r * SQUARE_SIZE + SQUARE_SIZE // 2)
+            center = (
+                c * SQUARE_SIZE + SQUARE_SIZE // 2,
+                r * SQUARE_SIZE + SQUARE_SIZE // 2,
+            )
             draw_piece(p, center)
 
     # Game status overlay if game over
@@ -377,8 +453,8 @@ def draw_board(board: Board, selected: Optional[Tuple[int, int]], legal_moves_fo
 
 
 def draw_piece(piece: Piece, center: Tuple[int, int]):
-    glyph_map = UNICODE_WHITE if piece.color == 'w' else UNICODE_BLACK
-    glyph = glyph_map.get(piece.kind, '?')
+    glyph_map = UNICODE_WHITE if piece.color == "w" else UNICODE_BLACK
+    glyph = glyph_map.get(piece.kind, "?")
     try:
         surf = PIECE_FONT.render(glyph, True, (0, 0, 0))
         # Simple shadow
@@ -389,10 +465,12 @@ def draw_piece(piece: Piece, center: Tuple[int, int]):
         screen.blit(surf, rect)
     except Exception:
         # Fallback: draw simple shapes/letters
-        color = (20, 20, 20) if piece.color == 'b' else (240, 240, 240)
+        color = (20, 20, 20) if piece.color == "b" else (240, 240, 240)
         radius = int(SQUARE_SIZE * 0.35)
         pygame.draw.circle(screen, color, center, radius)
-        label = UI_FONT.render(piece.kind, True, (0, 0, 0) if piece.color == 'w' else (255, 255, 255))
+        label = UI_FONT.render(
+            piece.kind, True, (0, 0, 0) if piece.color == "w" else (255, 255, 255)
+        )
         screen.blit(label, label.get_rect(center=center))
 
 
@@ -400,18 +478,19 @@ def draw_piece(piece: Piece, center: Tuple[int, int]):
 # Game State and Loop
 # ---------------------------
 
+
 def has_any_legal_moves(board: Board, color: str) -> bool:
     return len(generate_legal_moves(board, color)) > 0
 
 
 def game_status_text(board: Board, turn: str) -> Optional[str]:
-    opponent = 'b' if turn == 'w' else 'w'
+    opponent = "b" if turn == "w" else "w"
     # If it's the current turn's move and no legal moves
     legal = generate_legal_moves(board, turn)
     if not legal:
         if is_in_check(board, turn):
             # The side to move is checkmated; opponent wins
-            return "Checkmate! " + ("White" if opponent == 'w' else "Black") + " wins"
+            return "Checkmate! " + ("White" if opponent == "w" else "Black") + " wins"
         else:
             return "Stalemate"
     return None
@@ -419,7 +498,7 @@ def game_status_text(board: Board, turn: str) -> Optional[str]:
 
 def run_game():
     board = initial_board()
-    turn = 'w'  # white moves first
+    turn = "w"  # white moves first
     selected: Optional[Tuple[int, int]] = None
     legal_moves_cache: List[Move] = []
     legal_squares_for_selected: List[Tuple[int, int]] = []
@@ -432,35 +511,52 @@ def run_game():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit(0)
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and game_over_text is None:
+            if (
+                event.type == pygame.MOUSEBUTTONDOWN
+                and event.button == 1
+                and game_over_text is None
+            ):
                 mx, my = event.pos
                 r, c = my // SQUARE_SIZE, mx // SQUARE_SIZE
-                if turn == 'w':
+                if turn == "w":
                     if selected is None:
                         # Select a white piece
                         p = board[r][c]
-                        if p and p.color == 'w':
+                        if p and p.color == "w":
                             selected = (r, c)
-                            legal_moves_cache = generate_legal_moves(board, 'w')
-                            legal_squares_for_selected = [(m[2], m[3]) for m in legal_moves_cache if m[0] == r and m[1] == c]
+                            legal_moves_cache = generate_legal_moves(board, "w")
+                            legal_squares_for_selected = [
+                                (m[2], m[3])
+                                for m in legal_moves_cache
+                                if m[0] == r and m[1] == c
+                            ]
                     else:
                         sr, sc = selected
                         # If clicking the same color piece, reselect
                         p = board[r][c]
-                        if p and p.color == 'w' and (r, c) != (sr, sc):
+                        if p and p.color == "w" and (r, c) != (sr, sc):
                             selected = (r, c)
-                            legal_moves_cache = generate_legal_moves(board, 'w')
-                            legal_squares_for_selected = [(m[2], m[3]) for m in legal_moves_cache if m[0] == r and m[1] == c]
+                            legal_moves_cache = generate_legal_moves(board, "w")
+                            legal_squares_for_selected = [
+                                (m[2], m[3])
+                                for m in legal_moves_cache
+                                if m[0] == r and m[1] == c
+                            ]
                         else:
                             # Attempt to move
                             chosen: Optional[Move] = None
                             for m in legal_moves_cache:
-                                if m[0] == sr and m[1] == sc and m[2] == r and m[3] == c:
+                                if (
+                                    m[0] == sr
+                                    and m[1] == sc
+                                    and m[2] == r
+                                    and m[3] == c
+                                ):
                                     chosen = m
                                     break
                             if chosen:
                                 board = apply_move(board, chosen)
-                                turn = 'b'
+                                turn = "b"
                                 selected = None
                                 legal_moves_cache = []
                                 legal_squares_for_selected = []
@@ -473,15 +569,15 @@ def run_game():
                                 legal_squares_for_selected = []
 
         # AI move if black to move and not game over
-        if game_over_text is None and turn == 'b':
+        if game_over_text is None and turn == "b":
             # Simple delay could be added; for now, instant move
-            move = ai_select_move(board, 'b')
+            move = ai_select_move(board, "b")
             if move is None:
                 # No legal moves -> checkmate or stalemate from black's perspective
                 game_over_text = game_status_text(board, turn)
             else:
                 board = apply_move(board, move)
-                turn = 'w'
+                turn = "w"
                 game_over_text = game_status_text(board, turn)
 
         # Draw
